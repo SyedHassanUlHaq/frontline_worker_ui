@@ -9,10 +9,20 @@ export default function ChatWindow() {
   const [darkMode, setDarkMode] = useState(true);
   const [isOnline, setIsOnline] = useState(true);
   const [typewriterEnabled, setTypewriterEnabled] = useState(true);
-  const [sessionId] = useState(() => `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
+  const [sessionId] = useState(() => {
+    // Generate new session ID on every page load/refresh
+    const newSessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    console.log('✨ Created new session ID:', newSessionId);
+    return newSessionId;
+  });
   const [location, setLocation] = useState({ latitude: null, longitude: null });
   const [latency, setLatency] = useState(0);
   const bottomRef = useRef(null);
+
+  // Log session ID on mount
+  useEffect(() => {
+    console.log('📱 Chat Window mounted with session ID:', sessionId);
+  }, [sessionId]);
 
   // Get user location
   useEffect(() => {
@@ -160,6 +170,10 @@ export default function ChatWindow() {
     setMessages([]);
   };
 
+  const resetSession = () => {
+    window.location.reload(); // Reload to generate new session ID
+  };
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, aiTyping]);
@@ -192,11 +206,11 @@ export default function ChatWindow() {
           </div>
           <button 
             className="action-btn" 
-            onClick={clearChat}
-            title="Clear chat"
-            aria-label="Clear chat"
+            onClick={resetSession}
+            title="Reset session"
+            aria-label="Reset session"
           >
-            🗑️
+            🔄
           </button>
           <button 
             className="action-btn" 
