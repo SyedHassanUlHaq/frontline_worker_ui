@@ -9,7 +9,43 @@ export default function ChatWindow() {
   const [darkMode, setDarkMode] = useState(true);
   const [isOnline, setIsOnline] = useState(true);
   const [typewriterEnabled, setTypewriterEnabled] = useState(true);
+  const [sessionId] = useState(() => `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
+  const [location, setLocation] = useState({ latitude: null, longitude: null });
+  const [latency, setLatency] = useState(0);
   const bottomRef = useRef(null);
+
+  // Get user location
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setLocation({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude
+          });
+        },
+        (error) => {
+          console.warn('Geolocation error:', error);
+          // Set default location (San Francisco) if geolocation fails
+          setLocation({
+            latitude: 37.7749,
+            longitude: -122.4194
+          });
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 300000 // 5 minutes
+        }
+      );
+    } else {
+      // Set default location if geolocation is not supported
+      setLocation({
+        latitude: 37.7749,
+        longitude: -122.4194
+      });
+    }
+  }, []);
 
   // Simulate connection status
   useEffect(() => {
@@ -19,26 +55,72 @@ export default function ChatWindow() {
     return () => clearInterval(interval);
   }, []);
 
-  const sendMessage = (text) => {
+  // Measure latency
+  const measureLatency = async () => {
+    const startTime = performance.now();
+    try {
+      // Simulate network request
+      await new Promise(resolve => setTimeout(resolve, Math.random() * 100 + 50));
+      const endTime = performance.now();
+      setLatency(Math.round(endTime - startTime));
+    } catch (error) {
+      setLatency(0);
+    }
+  };
+
+  const sendMessage = async (text) => {
     if (!text.trim()) return;
+    
+    // Measure latency before sending
+    await measureLatency();
+    
+    // Prepare message data with all required fields
+    const messageData = {
+      session_id: sessionId,
+      latitude: location.latitude,
+      longitude: location.longitude,
+      coordinates: `${location.latitude},${location.longitude}`,
+      latency: latency,
+      message: text,
+      timestamp: new Date().toISOString()
+    };
+    
+    console.log('Sending message with data:', messageData);
     
     const userMessage = {
       id: Date.now(),
       sender: "User",
       message: text,
       timestamp: new Date(),
+      metadata: messageData
     };
     
     setMessages((prev) => [...prev, userMessage]);
     setAiTyping(true);
 
     // Simulate AI response with more realistic delay
-    setTimeout(() => {
+    setTimeout(async () => {
+      // Measure latency for AI response
+      await measureLatency();
+      
+      const aiResponseData = {
+        session_id: sessionId,
+        latitude: location.latitude,
+        longitude: location.longitude,
+        coordinates: `${location.latitude},${location.longitude}`,
+        latency: latency,
+        message: generateAIResponse(text),
+        timestamp: new Date().toISOString()
+      };
+      
+      console.log('AI response with data:', aiResponseData);
+      
       const aiResponse = {
         id: Date.now() + 1,
         sender: "AI",
         message: generateAIResponse(text),
         timestamp: new Date(),
+        metadata: aiResponseData,
         buttons: [
           { 
             label: "👍 Helpful", 
@@ -99,6 +181,15 @@ export default function ChatWindow() {
           </div>
         </div>
         <div className="header-actions">
+          <div className="session-info">
+            <div className="session-id">Session: {sessionId.split('_')[1]}</div>
+            <div className="location-info">
+              📍 {location.latitude ? `${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}` : 'Getting location...'}
+            </div>
+            <div className="latency-info">
+              ⚡ {latency}ms
+            </div>
+          </div>
           <button 
             className="action-btn" 
             onClick={clearChat}
