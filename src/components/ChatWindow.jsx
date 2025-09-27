@@ -24,36 +24,66 @@ export default function ChatWindow() {
     console.log('📱 Chat Window mounted with session ID:', sessionId);
   }, [sessionId]);
 
-  // Get user location
+  // Get user location (mobile-optimized)
   useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setLocation({
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude
-          });
-        },
-        (error) => {
-          console.warn('Geolocation error:', error);
-          // Set default location (San Francisco) if geolocation fails
-          setLocation({
-            latitude: 37.7749,
-            longitude: -122.4194
-          });
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 300000 // 5 minutes
-        }
-      );
+    const getLocation = () => {
+      if (navigator.geolocation) {
+        console.log('🌍 Requesting location...');
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            console.log('📍 Location obtained:', {
+              lat: position.coords.latitude,
+              lng: position.coords.longitude,
+              accuracy: position.coords.accuracy
+            });
+            setLocation({
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude
+            });
+          },
+          (error) => {
+            console.warn('Geolocation error:', error.message);
+            
+            // Handle different error types
+            if (error.code === error.PERMISSION_DENIED) {
+              console.warn('📍 Location permission denied by user');
+            } else if (error.code === error.POSITION_UNAVAILABLE) {
+              console.warn('📍 Location information unavailable');
+            } else if (error.code === error.TIMEOUT) {
+              console.warn('📍 Location request timed out');
+            }
+            
+            // Set default location if geolocation fails
+            setLocation({
+              latitude: 37.7749,
+              longitude: -122.4194
+            });
+          },
+          {
+            enableHighAccuracy: true, // Better for mobile GPS
+            timeout: 15000, // Longer timeout for mobile
+            maximumAge: 300000 // 5 minutes cache
+          }
+        );
+      } else {
+        console.warn('Geolocation not supported');
+        // Set default location if geolocation is not supported
+        setLocation({
+          latitude: 37.7749,
+          longitude: -122.4194
+        });
+      }
+    };
+
+    // Check if we're on mobile
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    console.log('📱 Mobile device detected:', isMobile);
+
+    // Small delay for mobile to ensure page is fully loaded
+    if (isMobile) {
+      setTimeout(getLocation, 1000);
     } else {
-      // Set default location if geolocation is not supported
-      setLocation({
-        latitude: 37.7749,
-        longitude: -122.4194
-      });
+      getLocation();
     }
   }, []);
 
